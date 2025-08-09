@@ -15,10 +15,20 @@
 ## 架构概述
 
 ```
-[用户请求] -> [Nginx/OpenResty] -> [Lua脚本] -> [Kubernetes API] -> [OSS存储]
-                      |                               |
-                      v                               v
-                  [缓存系统]                      [CRD配置发现]
+┌─────────────┐    HTTP API    ┌──────────────────┐
+│             │◄──────────────►│                  │
+│  OpenResty  │                │   Go Watcher     │
+│  (Lua API)  │                │   (watch CRDs)   │
+│             │                │                  │
+└─────────────┘                └──────────────────┘
+       │                               │
+       │ Proxy Requests                │ K8S API
+       ▼                               ▼
+┌─────────────┐                ┌──────────────────┐
+│             │                │                  │
+│   OSS/S3    │                │  Kubernetes API  │
+│             │                │                  │
+└─────────────┘                └──────────────────┘
 ```
 
 ## 核心组件
@@ -49,17 +59,8 @@
 ### 1. 部署到 Kubernetes
 
 ```bash
-# 构建镜像
-./scripts/build.sh
-
-# 完整部署
-./scripts/deploy.sh
-
-# 仅部署 CRDs
-./scripts/deploy.sh crds
-
-# 检查部署状态
-./scripts/deploy.sh status
+kubectl create -f crds/
+kubectl create -f deploy/
 ```
 
 ### 2. 配置 OSS 凭据
@@ -171,13 +172,13 @@ spec:
 ### 健康检查
 
 ```bash
-curl http://your-proxy/health
+curl http://your-proxy:9181/healthz
 ```
 
 ### 指标监控
 
 ```bash
-curl http://your-proxy/metrics
+curl http://your-proxy:9181/metrics
 ```
 
 ### 查看日志

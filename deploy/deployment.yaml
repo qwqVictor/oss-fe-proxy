@@ -23,8 +23,8 @@ spec:
         ports:
         - containerPort: 80
           name: http
-        - containerPort: 443
-          name: https
+        - containerPort: 9181
+          name: metrics
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -47,16 +47,16 @@ spec:
             cpu: "4"
         livenessProbe:
           httpGet:
-            path: /health
-            port: 80
+            path: /healthz
+            port: 9181
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health
-            port: 80
+            path: /healthz
+            port: 9181
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -98,9 +98,9 @@ spec:
     targetPort: 80
     protocol: TCP
     name: http
-  - port: 443
-    targetPort: 443
+  - port: 9181
+    targetPort: 9181
     protocol: TCP
-    name: https
+    name: metrics
   selector:
     app: oss-fe-proxy

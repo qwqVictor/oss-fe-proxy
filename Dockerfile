@@ -1,11 +1,24 @@
-# 使用 OpenResty 官方镜像作为基础镜像
+# 第一阶段：Go 编译阶段
+FROM reg.imvictor.tech/hub/library/golang:1.21-alpine AS go-builder
+
+WORKDIR /app
+
+# 复制 Go 模块文件
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 复制源码并编译
+COPY cmd/ ./cmd/
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-w -s' -o crd-watcher ./cmd/watcher
+
+# 第二阶段：最终运行镜像
 FROM reg.imvictor.tech/hub/openresty/openresty:1.27.1.2-3-bookworm-fat
 
 # 设置维护者信息
 LABEL maintainer="i@qwq.ren"
 LABEL description="OSS Frontend Proxy based on OpenResty"
 
-# 安装必要的包
+# 安装必要的包（不包括 Go 编译器）
 RUN apt-get update && \
     apt-get install -y \
         ca-certificates \
@@ -14,6 +27,7 @@ RUN apt-get update && \
         wget \
         unzip \
         openssl \
+        supervisor \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 安装 Lua resty 库（用 OPM）
@@ -27,11 +41,17 @@ RUN mkdir -p /usr/local/openresty/lua \
     && mkdir -p /var/cache/nginx \
     && mkdir -p /etc/nginx/ssl
 
+# 从编译阶段复制二进制文件
+COPY --from=go-builder /app/crd-watcher /usr/local/bin/crd-watcher
+
 # 复制 Lua 脚本
 COPY lua/ /usr/local/openresty/lua/
 
 # 复制 nginx 配置
 COPY nginx/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
+
+# 复制 supervisor 配置
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # 创建启动脚本
 COPY scripts/entrypoint.sh /entrypoint.sh
@@ -62,4 +82,4 @@ WORKDIR /usr/local/openresty
 
 # 启动服务
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
