@@ -50,11 +50,19 @@
 
 ## 快速开始
 
-### 1. 部署到 Kubernetes
+### 1. 生成 Webhook 证书并部署到 Kubernetes
 
 ```bash
+# 生成 100 年有效期的证书
+./scripts/generate-cert.sh
+
+# 按顺序部署
 kubectl create -f crds/
-kubectl create -f deploy/
+kubectl create -f deploy/namespace.yaml
+kubectl create -f deploy/webhook-certs.yaml
+kubectl create -f deploy/rbac.yaml
+kubectl create -f deploy/deployment.yaml
+kubectl create -f deploy/webhook.yaml
 ```
 
 ### 2. 配置 OSS 凭据
@@ -203,6 +211,9 @@ kubectl get pods -n oss-fe-proxy -o wide
 Apache-2.0
 
 ## 更新日志
+
+### v1.0.2
+- 支持 Webhook 检查域名分配重复
 
 ### v1.0.1
 - 将 K8S 监听拆分到 go 程序

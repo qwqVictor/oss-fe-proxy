@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oss-fe-proxy-webhook
+  namespace: oss-fe-proxy
+  labels:
+    app: oss-fe-proxy
+spec:
+  type: ClusterIP
+  ports:
+  - port: 443
+    targetPort: 8443
+    protocol: TCP
+    name: webhook
+  selector:
+    app: oss-fe-proxy
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: oss-fe-proxy-validator
+webhooks:
+- name: oss-fe-proxy-validator.ossfe.imvictor.tech
+  clientConfig:
+    service:
+      name: oss-fe-proxy-webhook
+      namespace: oss-fe-proxy
+      path: "/validate"
+    # caBundle will be populated by the certificate manager
+    caBundle: "<CA_BUNDLE>"
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["ossfe.imvictor.tech"]
+    apiVersions: ["v1"]
+    resources: ["ossproxyroutes"]
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  failurePolicy: Fail

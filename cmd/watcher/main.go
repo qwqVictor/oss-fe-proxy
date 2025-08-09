@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -74,6 +76,28 @@ func NewWatcher() (*Watcher, error) {
 func (w *Watcher) Start() error {
 	log.Println("Starting CRD watcher...")
 
+	// 启动 admission webhook（如果启用）
+	var webhookServer *WebhookServer
+	if webhookEnabled := os.Getenv("WEBHOOK_ENABLED"); webhookEnabled == "true" {
+		webhookPort, _ := strconv.Atoi(getEnvOrDefault("WEBHOOK_PORT", "8443"))
+		certPath := getEnvOrDefault("WEBHOOK_CERT_PATH", "/tmp/webhook-certs/tls.crt")
+		keyPath := getEnvOrDefault("WEBHOOK_KEY_PATH", "/tmp/webhook-certs/tls.key")
+
+		// 检查证书文件是否存在
+		if err := validateCertFiles(certPath, keyPath); err != nil {
+			log.Printf("Webhook certificate files validation failed: %v", err)
+			return err
+		}
+
+		webhookServer = NewWebhookServer(w, webhookPort, certPath, keyPath)
+		go func() {
+			if err := webhookServer.Start(); err != nil {
+				log.Printf("Webhook server failed: %v", err)
+			}
+		}()
+		log.Printf("Admission webhook started on port %d", webhookPort)
+	}
+
 	// 等待 OpenResty 启动
 	if err := w.waitForOpenResty(); err != nil {
 		log.Printf("Failed to connect to OpenResty: %v", err)
@@ -100,10 +124,44 @@ func (w *Watcher) Start() error {
 	case sig := <-sigCh:
 		log.Printf("Received signal %v, shutting down...", sig)
 		w.cancel()
+		if webhookServer != nil {
+			webhookServer.Stop()
+		}
 	case <-w.ctx.Done():
 		log.Println("Context cancelled, shutting down...")
+		if webhookServer != nil {
+			webhookServer.Stop()
+		}
 	}
 
+	return nil
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// validateCertFiles 检查证书文件是否存在且可读
+func validateCertFiles(certPath, keyPath string) error {
+	// 检查证书文件
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		return fmt.Errorf("certificate file not found: %s", certPath)
+	}
+
+	// 检查私钥文件
+	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+		return fmt.Errorf("private key file not found: %s", keyPath)
+	}
+
+	// 尝试加载证书验证格式是否正确
+	if _, err := tls.LoadX509KeyPair(certPath, keyPath); err != nil {
+		return fmt.Errorf("failed to load certificate pair: %v", err)
+	}
+
+	log.Printf("Webhook certificates validated successfully: cert=%s, key=%s", certPath, keyPath)
 	return nil
 }
 

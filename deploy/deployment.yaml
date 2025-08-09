@@ -25,11 +25,29 @@ spec:
           name: http
         - containerPort: 9181
           name: metrics
+        - containerPort: 8443
+          name: webhook
         env:
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: WEBHOOK_ENABLED
+          value: "true"
+        - name: WEBHOOK_PORT
+          value: "8443"
+        - name: WEBHOOK_SERVICE_NAME
+          value: "oss-fe-proxy-webhook"
+        - name: WEBHOOK_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: WEBHOOK_CERT_PATH
+          value: "/tmp/webhook-certs/tls.crt"
+        - name: WEBHOOK_KEY_PATH
+          value: "/tmp/webhook-certs/tls.key"
+        - name: WEBHOOK_CA_PATH
+          value: "/tmp/webhook-certs/ca.crt"
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -40,11 +58,11 @@ spec:
               fieldPath: status.podIP
         resources:
           requests:
-            memory: "128Mi"
+            memory: "1024Mi"
             cpu: "1"
           limits:
-            memory: "512Mi"
-            cpu: "4"
+            memory: "4096Mi"
+            cpu: "2"
         livenessProbe:
           httpGet:
             path: /healthz
@@ -66,11 +84,16 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-logs
           mountPath: /var/log/nginx
+        - name: webhook-certs
+          mountPath: /tmp/webhook-certs
       volumes:
       - name: nginx-cache
         emptyDir: {}
       - name: nginx-logs
         emptyDir: {}
+      - name: webhook-certs
+        secret:
+          secretName: oss-fe-proxy-webhook-certs
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
