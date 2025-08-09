@@ -119,6 +119,9 @@ function _M.handle_request()
     local host = ngx.var.http_host or ngx.var.host
     local uri = ngx.var.uri
     
+    -- 记录请求开始时间用于指标收集
+    local start_time = ngx.now()
+    
     -- 添加调试信息
     ngx.log(ngx.INFO, "处理请求: ", host, uri)
     
@@ -129,6 +132,7 @@ function _M.handle_request()
         ngx.status = 500
         ngx.header["Content-Type"] = "text/plain; charset=utf-8"
         ngx.say("内部服务器错误: " .. err)
+        -- 无法获取配置时，无法记录路由指标，但可以记录全局错误指标
         return
     end
     
@@ -137,11 +141,25 @@ function _M.handle_request()
         ngx.status = 404
         ngx.header["Content-Type"] = "text/plain; charset=utf-8"
         ngx.say("未找到匹配的路由: " .. host)
+        -- 同样无法记录路由指标
         return
     end
     
     local route_spec = config.route.spec
     local upstream_spec = config.upstream.spec
+    
+    -- 初始化指标收集
+    local metrics_ok, metrics = pcall(require, "metrics")
+    local route_namespace, route_name, upstream_namespace, upstream_name
+    
+    if metrics_ok then
+        route_namespace = config.route.metadata.namespace
+        route_name = config.route.metadata.name
+        upstream_namespace = config.upstream.metadata.namespace
+        upstream_name = config.upstream.metadata.name
+    else
+        ngx.log(ngx.ERR, "Failed to load metrics module in oss_proxy: " .. (metrics or "unknown error"))
+    end
     
     -- 处理根路径
     if uri == "/" then
@@ -161,6 +179,14 @@ function _M.handle_request()
         ngx.log(ngx.ERR, "OSS 请求失败: ", request_err)
         ngx.status = 500
         ngx.say("内部服务器错误")
+        
+        -- 记录OSS请求失败的指标
+        if metrics_ok and metrics and route_namespace and route_name then
+            metrics.record_request_end("route", route_namespace, route_name, 500, start_time)
+        end
+        if metrics_ok and metrics and upstream_namespace and upstream_name then
+            metrics.record_request_end("upstream", upstream_namespace, upstream_name, 500, start_time)
+        end
         return
     end
     
@@ -185,6 +211,14 @@ function _M.handle_request()
                 
                 ngx.status = 200
                 ngx.say(index_res.body)
+                
+                -- 记录SPA重定向的指标（状态码200，因为成功返回了index文件）
+                if metrics_ok and metrics and route_namespace and route_name then
+                    metrics.record_request_end("route", route_namespace, route_name, 200, start_time)
+                end
+                if metrics_ok and metrics and upstream_namespace and upstream_name then
+                    metrics.record_request_end("upstream", upstream_namespace, upstream_name, 200, start_time)
+                end
                 return
             end
         else
@@ -198,6 +232,14 @@ function _M.handle_request()
                     ngx.header["Content-Type"] = "text/html; charset=utf-8"
                     ngx.status = 404
                     ngx.say(error_res.body)
+                    
+                    -- 记录自定义404页面的指标
+                    if metrics_ok and metrics and route_namespace and route_name then
+                        metrics.record_request_end("route", route_namespace, route_name, 404, start_time)
+                    end
+                    if metrics_ok and metrics and upstream_namespace and upstream_name then
+                        metrics.record_request_end("upstream", upstream_namespace, upstream_name, 404, start_time)
+                    end
                     return
                 end
             end
@@ -205,6 +247,14 @@ function _M.handle_request()
         
         ngx.status = 404
         ngx.say("页面未找到")
+        
+        -- 记录最终404的指标
+        if metrics_ok and metrics and route_namespace and route_name then
+            metrics.record_request_end("route", route_namespace, route_name, 404, start_time)
+        end
+        if metrics_ok and metrics and upstream_namespace and upstream_name then
+            metrics.record_request_end("upstream", upstream_namespace, upstream_name, 404, start_time)
+        end
         return
     end
     
@@ -212,6 +262,14 @@ function _M.handle_request()
     if res.status ~= 200 then
         ngx.status = res.status
         ngx.say("请求失败: " .. res.status)
+        
+        -- 记录其他错误状态码的指标
+        if metrics_ok and metrics and route_namespace and route_name then
+            metrics.record_request_end("route", route_namespace, route_name, res.status, start_time)
+        end
+        if metrics_ok and metrics and upstream_namespace and upstream_name then
+            metrics.record_request_end("upstream", upstream_namespace, upstream_name, res.status, start_time)
+        end
         return
     end
     
@@ -243,6 +301,14 @@ function _M.handle_request()
     -- 输出响应体
     ngx.status = res.status
     ngx.say(res.body)
+    
+    -- 记录指标（在响应完成后）
+    if metrics_ok and metrics and route_namespace and route_name then
+        metrics.record_request_end("route", route_namespace, route_name, res.status, start_time)
+    end
+    if metrics_ok and metrics and upstream_namespace and upstream_name then
+        metrics.record_request_end("upstream", upstream_namespace, upstream_name, res.status, start_time)
+    end
 end
 
 return _M

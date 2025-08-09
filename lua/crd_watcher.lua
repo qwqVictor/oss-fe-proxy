@@ -219,4 +219,14 @@ function _M.is_ready()
     return crd_cache.ready
 end
 
+-- 获取所有路由数据（用于指标收集）
+function _M.get_all_routes()
+    return crd_cache.routes
+end
+
+-- 获取所有上游数据（用于指标收集）
+function _M.get_all_upstreams()
+    return crd_cache.upstreams
+end
+
 return _M

@@ -127,3 +127,25 @@ spec:
     name: metrics
   selector:
     app: oss-fe-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oss-fe-proxy-headless
+  namespace: oss-fe-proxy
+  labels:
+    app: oss-fe-proxy
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 9181
+    targetPort: 9181
+    protocol: TCP
+    name: metrics
+  selector:
+    app: oss-fe-proxy
