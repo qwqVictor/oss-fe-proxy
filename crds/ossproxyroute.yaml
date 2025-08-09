@@ -1,0 +1,119 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ossproxyroutes.ossfe.imvictor.tech
+spec:
+  group: ossfe.imvictor.tech
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              hosts:
+                type: array
+                items:
+                  type: string
+                description: "域名列表，例如: ['qwq.ren', 'imvictor.tech']"
+              upstreamRef:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                description: "引用的 OSSProxyUpstream 资源"
+              bucket:
+                type: string
+                description: "OSS bucket 名称"
+              prefix:
+                type: string
+                default: ""
+                description: "OSS 对象前缀，例如: 'static/'"
+              indexFile:
+                type: string
+                default: "index.html"
+                description: "默认索引文件名"
+              spaApp:
+                type: boolean
+                default: false
+                description: "SPA 应用模式，404 时返回 index 文件而非 404 状态码"
+              errorPages:
+                type: object
+                additionalProperties:
+                  type: string
+                description: "自定义错误页面，key 为状态码，value 为文件路径"
+              cache:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  maxAge:
+                    type: integer
+                    default: 3600
+                    description: "缓存时间（秒）"
+                  htmlMaxAge:
+                    type: integer
+                    default: 300
+                    description: "HTML 文件缓存时间（秒）"
+                  staticMaxAge:
+                    type: integer
+                    default: 86400
+                    description: "静态文件缓存时间（秒）"
+            required:
+            - hosts
+            - upstreamRef
+            - bucket
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+              lastSyncTime:
+                type: string
+                format: date-time
+    additionalPrinterColumns:
+    - name: Hosts
+      type: string
+      description: Configured hosts
+      jsonPath: .spec.hosts[*]
+    - name: Bucket
+      type: string
+      description: OSS bucket
+      jsonPath: .spec.bucket
+    - name: SPA
+      type: boolean
+      description: SPA mode enabled
+      jsonPath: .spec.spaApp
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  scope: Namespaced
+  names:
+    plural: ossproxyroutes
+    singular: ossproxyroute
+    kind: OSSProxyRoute
+    shortNames:
+    - opr

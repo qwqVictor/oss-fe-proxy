@@ -1,0 +1,23 @@
+apiVersion: ossfe.imvictor.tech/v1
+kind: OSSProxyRoute
+metadata:
+  name: await-cat
+  namespace: oss-fe-proxy
+spec:
+  hosts:
+    - "await.cat"
+  upstreamRef:
+    name: s3os
+    namespace: oss-fe-proxy
+  bucket: "await-cat"
+  prefix: ""
+  indexFile: "index.html"
+  spaApp: false
+  errorPages:
+    "404": "404.html"
+    "500": "error.html"
+  cache:
+    enabled: true
+    maxAge: 3600
+    htmlMaxAge: 300
+    staticMaxAge: 86400

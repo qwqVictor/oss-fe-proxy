@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: oss-fe-proxy
+  namespace: oss-fe-proxy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oss-fe-proxy
+rules:
+- apiGroups: ["ossfe.imvictor.tech"]
+  resources: ["ossproxyroutes", "ossproxyupstreams"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oss-fe-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oss-fe-proxy
+subjects:
+- kind: ServiceAccount
+  name: oss-fe-proxy
+  namespace: oss-fe-proxy

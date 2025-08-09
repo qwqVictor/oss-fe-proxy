@@ -1,0 +1,150 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ossproxyupstreams.ossfe.imvictor.tech
+spec:
+  group: ossfe.imvictor.tech
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              provider:
+                type: string
+                enum: ["aws", "aliyun", "tencent", "minio", "generic"]
+                description: "OSS 提供商类型"
+              region:
+                type: string
+                description: "OSS 区域"
+              endpoint:
+                type: string
+                description: "OSS 端点 URL"
+              useHTTPS:
+                type: boolean
+                default: true
+                description: "是否使用 HTTPS 协议"
+              pathStyle:
+                type: boolean
+                default: false
+                description: "是否使用路径样式访问（对于 AWS S3 兼容服务）"
+              credentials:
+                type: object
+                properties:
+                  accessKeyId:
+                    type: string
+                    description: "访问密钥 ID"
+                  secretAccessKey:
+                    type: string
+                    description: "访问密钥 Secret"
+                  sessionToken:
+                    type: string
+                    description: "会话令牌（可选）"
+                  secretRef:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      accessKeyIdKey:
+                        type: string
+                        default: "accessKeyId"
+                      secretAccessKeyKey:
+                        type: string
+                        default: "secretAccessKey"
+                      sessionTokenKey:
+                        type: string
+                        default: "sessionToken"
+                    required:
+                    - name
+                    description: "从 Secret 中读取凭据"
+                description: "OSS 访问凭据"
+              timeout:
+                type: object
+                properties:
+                  connect:
+                    type: integer
+                    default: 10
+                    description: "连接超时时间（秒）"
+                  read:
+                    type: integer
+                    default: 30
+                    description: "读取超时时间（秒）"
+                  send:
+                    type: integer
+                    default: 30
+                    description: "发送超时时间（秒）"
+              retry:
+                type: object
+                properties:
+                  maxAttempts:
+                    type: integer
+                    default: 3
+                    description: "最大重试次数"
+                  backoffMultiplier:
+                    type: number
+                    default: 2.0
+                    description: "退避倍数"
+            required:
+            - provider
+            - region
+            - endpoint
+            - credentials
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+              lastValidationTime:
+                type: string
+                format: date-time
+              connectionStatus:
+                type: string
+                enum: ["Connected", "Disconnected", "Unknown"]
+    additionalPrinterColumns:
+    - name: Provider
+      type: string
+      description: OSS provider
+      jsonPath: .spec.provider
+    - name: Region
+      type: string
+      description: OSS region
+      jsonPath: .spec.region
+    - name: Endpoint
+      type: string
+      description: OSS endpoint
+      jsonPath: .spec.endpoint
+    - name: Status
+      type: string
+      description: Connection status
+      jsonPath: .status.connectionStatus
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  scope: Namespaced
+  names:
+    plural: ossproxyupstreams
+    singular: ossproxyupstream
+    kind: OSSProxyUpstream
+    shortNames:
+    - opu

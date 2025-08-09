@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: oss-fe-proxy
+  labels:
+    name: oss-fe-proxy
+    app: oss-fe-proxy
