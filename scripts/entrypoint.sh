@@ -8,6 +8,14 @@ if [ -z "$ACCESS_LOG_FILE" ]; then
     ACCESS_LOG_FILE="/dev/null"
 fi
 
+# 生成内部 API 认证密钥
+API_KEY_FILE="/tmp/api.key"
+if [ ! -f "$API_KEY_FILE" ]; then
+    # 生成 32 字节的随机密钥（Base64 编码）
+    INTERNAL_API_KEY=$(head -c 32 /dev/urandom | base64 | tr -d '=\n')
+    echo "$INTERNAL_API_KEY" > "$API_KEY_FILE"
+fi
+
 # 打印启动信息
 echo "Starting OSS Frontend Proxy with Go Watcher..."
 echo "Kubernetes API Server: ${KUBERNETES_SERVICE_HOST:-not-detected}"

@@ -45,6 +45,7 @@ type Watcher struct {
 	clientset kubernetes.Interface
 	ctx       context.Context
 	cancel    context.CancelFunc
+	apiKey    string
 }
 
 func NewWatcher() (*Watcher, error) {
@@ -65,11 +66,24 @@ func NewWatcher() (*Watcher, error) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// 读取内部 API 认证密钥
+	apiKeyFile := "/tmp/api.key"
+	apiKeyBytes, err := os.ReadFile(apiKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read API key from %s: %v", apiKeyFile, err)
+	}
+	apiKey := string(bytes.TrimSpace(apiKeyBytes))
+	if apiKey == "" {
+		return nil, fmt.Errorf("API key is empty")
+	}
+	log.Printf("Loaded internal API key: %s...", apiKey[:8])
+
 	return &Watcher{
 		client:    client,
 		clientset: clientset,
 		ctx:       ctx,
 		cancel:    cancel,
+		apiKey:    apiKey,
 	}, nil
 }
 
@@ -345,6 +359,7 @@ func (w *Watcher) notifyOpenresty(method, path string, obj *unstructured.Unstruc
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", w.apiKey)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
