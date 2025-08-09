@@ -2,6 +2,8 @@
 
 基于 OpenResty 的 OSS 前端代理服务，通过 Kubernetes CRD 自动发现域名并反向代理到 OSS，为前端应用提供部署支持。
 
+**注意：** 你仍然需要配置 Ingress 等方式将域名暴露出去，只不过 Ingress 的后端 Service 可以直接指向 oss-fe-proxy。
+
 ## 功能特性
 
 - 🚀 **自动发现**: 通过 Kubernetes CRD 自动发现域名配置
@@ -31,28 +33,20 @@
 └─────────────┘                └──────────────────┘
 ```
 
-## 核心组件
+## CRD 定义
 
-### 1. CRD 定义
-
-#### OSSProxyRoute
+### OSSProxyRoute
 定义域名到 OSS 的路由规则：
 - 支持多域名配置
 - SPA 应用模式支持
 - 自定义错误页面
 - 缓存策略配置
 
-#### OSSProxyUpstream
+### OSSProxyUpstream
 定义 OSS 访问配置：
 - 多种 OSS 提供商支持
 - 安全凭据管理
 - 连接超时和重试策略
-
-### 2. OpenResty 组件
-
-- **crd_watcher.lua**: Kubernetes CRD 监听和配置获取
-- **oss_proxy.lua**: OSS 代理逻辑和请求处理
-- **nginx.conf**: Nginx 主配置文件
 
 ## 快速开始
 
@@ -200,76 +194,19 @@ kubectl describe ossproxyroute my-frontend-app -n oss-fe-proxy
 kubectl get pods -n oss-fe-proxy -o wide
 ```
 
-## 故障排除
-
-### 常见问题
-
-1. **无法连接到 OSS**
-   - 检查网络连接
-   - 验证凭据是否正确
-   - 检查 endpoint 配置
-
-2. **404 错误**
-   - 确认 bucket 和对象路径正确
-   - 检查 OSS 权限设置
-   - 验证文件是否存在
-
-3. **CRD 不生效**
-   - 检查 RBAC 权限
-   - 查看 Pod 日志
-   - 验证 CRD 格式
-
-### 日志分析
-
-关键日志位置：
-- Nginx 访问日志: `/var/log/nginx/access.log`
-- Nginx 错误日志: `/var/log/nginx/error.log`
-- Kubernetes 事件: `kubectl get events -n oss-fe-proxy`
-
-## 安全考虑
-
-1. **凭据管理**: 使用 Kubernetes Secret 存储敏感信息
-2. **网络安全**: 配置适当的网络策略
-3. **权限控制**: 最小化 RBAC 权限
-4. **HTTPS**: 生产环境使用有效的 TLS 证书
-
-## 性能优化
-
-1. **缓存配置**: 根据业务需求调整缓存策略
-2. **连接池**: 利用 OpenResty 的连接池功能
-3. **资源限制**: 合理设置 CPU 和内存限制
-4. **负载均衡**: 使用多副本部署
-
 ## 开发和贡献
 
-### 本地开发
-
-```bash
-# 构建开发镜像
-./scripts/build.sh -t dev
-
-# 运行测试
-./scripts/test.sh
-```
-
-### 项目结构
-
-```
-oss-fe-proxy/
-├── crds/                 # CRD 定义
-├── lua/                  # Lua 脚本
-├── nginx/                # Nginx 配置
-├── deploy/               # Kubernetes 部署文件
-├── examples/             # 示例配置
-├── scripts/              # 构建和部署脚本
-└── Dockerfile            # 容器构建文件
-```
+感谢 Cursor 帮助我快速实现。
 
 ## 许可证
 
 Apache-2.0
 
 ## 更新日志
+
+### v1.0.1
+- 将 K8S 监听拆分到 go 程序
+- 支持更多 metrics
 
 ### v1.0.0
 - 初始版本
