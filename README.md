@@ -267,7 +267,7 @@ oss-fe-proxy/
 
 ## 许可证
 
-MIT License
+Apache-2.0
 
 ## 更新日志
 
