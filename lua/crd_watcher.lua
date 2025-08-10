@@ -318,8 +318,8 @@ function _M.get_upstream(name, namespace)
             ngx.log(ngx.WARN, "获取Secret失败: ", secret_err)
         else
             if secret.data then
-                local access_key_id = ngx.decode_base64(secret.data[secret_ref.accessKeyIdKey] or "")
-                local secret_access_key = ngx.decode_base64(secret.data[secret_ref.secretAccessKeyKey] or "")
+                local access_key_id = secret.data[secret_ref.accessKeyIdKey] or ""
+                local secret_access_key = secret.data[secret_ref.secretAccessKeyKey] or ""
                 up.spec.credentials.accessKeyId = access_key_id
                 up.spec.credentials.secretAccessKey = secret_access_key
             end
