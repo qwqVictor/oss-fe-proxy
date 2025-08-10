@@ -54,13 +54,10 @@ spec:
                         type: string
                       accessKeyIdKey:
                         type: string
-                        default: "accessKeyId"
+                        default: "access-key-id"
                       secretAccessKeyKey:
                         type: string
-                        default: "secretAccessKey"
-                      sessionTokenKey:
-                        type: string
-                        default: "sessionToken"
+                        default: "secret-access-key"
                     required:
                     - name
                     description: "从 Secret 中读取凭据"
