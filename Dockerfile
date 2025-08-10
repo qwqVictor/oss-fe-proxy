@@ -33,7 +33,8 @@ RUN apt-get update && \
 # 安装 Lua resty 库（用 OPM）
 RUN /usr/local/openresty/bin/opm install ledgetech/lua-resty-http \
     && /usr/local/openresty/bin/opm install openresty/lua-resty-string \
-    && /usr/local/openresty/bin/opm install openresty/lua-resty-lrucache
+    && /usr/local/openresty/bin/opm install openresty/lua-resty-lrucache \
+    && /usr/local/openresty/bin/opm install jkeys089/lua-resty-hmac
 
 # 创建必要的目录
 RUN mkdir -p /usr/local/openresty/lua \
