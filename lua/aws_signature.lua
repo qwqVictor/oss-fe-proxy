@@ -122,7 +122,8 @@ function _M.aws_get_headers(host, uri, region, access_key, secret_key)
   local signed_headers = {
     Authorization = auth,
     Host = host,
-    ['x-amz-date'] = get_iso8601_basic(timestamp)
+    ['x-amz-date'] = get_iso8601_basic(timestamp),
+    ['x-amz-content-sha256'] = get_sha256_digest("")
   }
   return signed_headers
 end

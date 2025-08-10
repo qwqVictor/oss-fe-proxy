@@ -2,6 +2,7 @@ local crd_watcher = require "crd_watcher"
 local http = require "resty.http"
 local str = require "resty.string"
 local aws_signature = require "aws_signature"
+local json = require "cjson"
 
 local _M = {}
 
@@ -14,11 +15,11 @@ local function build_oss_request_params(upstream_spec, bucket, object_key)
     local uri = ""
     
     if upstream_spec.pathStyle then
-        host = bucket .. "." .. endpoint
-        uri = "/" .. object_key
-    else
         host = endpoint
         uri = "/" .. bucket .. "/" .. object_key
+    else
+        host = bucket .. "." .. endpoint
+        uri = "/" .. object_key
     end
 
     return protocol, host, uri
@@ -33,7 +34,7 @@ local function oss_request(protocol, host, uri, headers, upstream_spec, bucket)
     httpc:set_timeout((timeout.connect or 10) * 1000)
     
     -- 如果是 AWS 类型，需要签名
-    if upstream_spec.provider == "aws" then
+    if upstream_spec.provider == "aws" or true then
         local creds = upstream_spec.credentials
         if creds.accessKeyId and creds.secretAccessKey then
             local signed_headers = aws_signature.aws_get_headers(host, uri, upstream_spec.region, creds.accessKeyId, creds.secretAccessKey)
@@ -57,7 +58,7 @@ end
 -- 处理静态文件请求
 function _M.handle_request()
     local host = ngx.var.http_host or ngx.var.host
-    local uri = ngx.var.uri
+    local uri = ngx.var.request_uri
     
     -- 记录请求开始时间用于指标收集
     local start_time = ngx.now()
