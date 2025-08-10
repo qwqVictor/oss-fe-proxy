@@ -84,10 +84,10 @@ metadata:
   name: my-oss-upstream
   namespace: oss-fe-proxy
 spec:
-  provider: "aws"
   region: "us-east-1"
   endpoint: "s3.amazonaws.com"
   useHTTPS: true
+  verifySSL: true
   pathStyle: false
   credentials:
     secretRef:
