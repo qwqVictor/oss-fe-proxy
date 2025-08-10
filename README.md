@@ -137,10 +137,10 @@ spec:
 
 | 字段 | 类型 | 必需 | 描述 |
 |------|------|------|------|
-| `provider` | string | ✅ | OSS 提供商（aws/aliyun/tencent/minio/generic） |
 | `region` | string | ✅ | OSS 区域 |
 | `endpoint` | string | ✅ | OSS 端点 URL |
 | `useHTTPS` | boolean | ❌ | 是否使用 HTTPS（默认: true） |
+| `verifySSL` | boolean | ❌ | 是否验证 SSL 证书（默认: true） |
 | `pathStyle` | boolean | ❌ | 是否使用路径样式（默认: false） |
 | `credentials` | object | ✅ | 访问凭据配置 |
 | `timeout` | object | ❌ | 超时配置 |

@@ -4,7 +4,6 @@ metadata:
   name: s3os
   namespace: oss-fe-proxy
 spec:
-  provider: "generic"
   region: "cn"
   endpoint: "s3os.imvictor.tech"
   useHTTPS: false

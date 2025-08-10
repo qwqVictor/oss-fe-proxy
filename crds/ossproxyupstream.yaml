@@ -15,10 +15,6 @@ spec:
           spec:
             type: object
             properties:
-              provider:
-                type: string
-                enum: ["aws", "aliyun", "tencent", "minio", "generic"]
-                description: "OSS 提供商类型"
               region:
                 type: string
                 description: "OSS 区域"
@@ -33,6 +29,10 @@ spec:
                 type: boolean
                 default: false
                 description: "是否使用路径样式访问（对于 AWS S3 兼容服务）"
+              verifySSL:
+                type: boolean
+                default: true
+                description: "是否验证 SSL 证书"
               credentials:
                 type: object
                 properties:

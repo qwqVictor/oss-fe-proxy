@@ -33,16 +33,13 @@ local function oss_request(protocol, host, uri, headers, upstream_spec, bucket)
     local timeout = upstream_spec.timeout or {}
     httpc:set_timeout((timeout.connect or 10) * 1000)
     
-    -- 如果是 AWS 类型，需要签名
-    if upstream_spec.provider == "aws" or true then
-        local creds = upstream_spec.credentials
-        if creds.accessKeyId and creds.secretAccessKey then
-            local signed_headers = aws_signature.aws_get_headers(host, uri, upstream_spec.region, creds.accessKeyId, creds.secretAccessKey)
-            headers = headers or {}
-            for name, value in pairs(signed_headers) do
-                ngx.log(ngx.DEBUG, "[oss_proxy] signed_headers: ", name, " = ", value)
-                headers[name] = value
-            end
+    local creds = upstream_spec.credentials
+    if creds.accessKeyId and creds.secretAccessKey then
+        local signed_headers = aws_signature.aws_get_headers(host, uri, upstream_spec.region, creds.accessKeyId, creds.secretAccessKey)
+        headers = headers or {}
+        for name, value in pairs(signed_headers) do
+            ngx.log(ngx.DEBUG, "[oss_proxy] signed_headers: ", name, " = ", value)
+            headers[name] = value
         end
     end
     
