@@ -14,13 +14,22 @@ local function build_oss_request_params(upstream_spec, bucket, object_key)
     local host = ""
     local uri = ""
     
+    -- 分离路径和查询参数
+    local path, query = object_key:match("([^?]*)(.*)")
+    
     if upstream_spec.pathStyle then
         host = endpoint
-        uri = "/" .. bucket .. "/" .. object_key
+        uri = "/" .. bucket .. path .. query
     else
         host = bucket .. "." .. endpoint
-        uri = "/" .. object_key
+        uri = "/" .. path .. query
     end
+    
+    -- 添加调试日志
+    ngx.log(ngx.DEBUG, "[oss_proxy] build_oss_request_params: object_key=", object_key)
+    ngx.log(ngx.DEBUG, "[oss_proxy] build_oss_request_params: path=", path)
+    ngx.log(ngx.DEBUG, "[oss_proxy] build_oss_request_params: query=", query)
+    ngx.log(ngx.DEBUG, "[oss_proxy] build_oss_request_params: final_uri=", uri)
 
     return protocol, host, uri
 end
@@ -48,6 +57,12 @@ local function oss_request(protocol, host, uri, headers, upstream_spec, bucket)
         headers = headers,
         ssl_verify = upstream_spec.useHTTPS == true  -- 只有明确设置为true时才验证SSL
     })
+    
+    -- 添加调试日志
+    local full_url = protocol .. "://" .. host .. uri
+    ngx.log(ngx.DEBUG, "[oss_proxy] oss_request: full_url=", full_url)
+    ngx.log(ngx.DEBUG, "[oss_proxy] oss_request: host=", host)
+    ngx.log(ngx.DEBUG, "[oss_proxy] oss_request: uri=", uri)
     
     return res, err
 end
@@ -110,8 +125,8 @@ function _M.handle_request()
     -- 构建 OSS URL
     local protocol, oss_host, oss_uri = build_oss_request_params(upstream_spec, route_spec.bucket, object_key)
     
-    -- 发起请求
-    local res, request_err = oss_request(protocol, oss_host, oss_uri, {}, upstream_spec, route_spec.bucket)
+    -- 发起请求 - 使用与AWS签名相同的URI格式
+    local res, request_err = oss_request(protocol, oss_host, uri, {}, upstream_spec, route_spec.bucket)
     
     if not res then
         ngx.log(ngx.ERR, "OSS 请求失败: ", request_err)
@@ -134,7 +149,7 @@ function _M.handle_request()
             -- SPA 模式：返回 index 文件
             local index_key = (route_spec.prefix or "") .. (route_spec.indexFile or "index.html")
             local protocol, oss_host, oss_uri = build_oss_request_params(upstream_spec, route_spec.bucket, index_key)
-            local index_res, index_err = oss_request(protocol, oss_host, oss_uri, {}, upstream_spec, route_spec.bucket)
+            local index_res, index_err = oss_request(protocol, oss_host, "/" .. index_key, {}, upstream_spec, route_spec.bucket)
             
             if index_res and index_res.status == 200 then
                 -- 设置正确的 Content-Type
@@ -164,7 +179,7 @@ function _M.handle_request()
             if route_spec.errorPages and route_spec.errorPages["404"] then
                 local error_key = (route_spec.prefix or "") .. route_spec.errorPages["404"]
                 local protocol, oss_host, oss_uri = build_oss_request_params(upstream_spec, route_spec.bucket, error_key)
-                local error_res, error_err = oss_request(protocol, oss_host, oss_uri, {}, upstream_spec, route_spec.bucket)
+                local error_res, error_err = oss_request(protocol, oss_host, "/" .. error_key, {}, upstream_spec, route_spec.bucket)
                 
                 if error_res and error_res.status == 200 then
                     ngx.header["Content-Type"] = "text/html; charset=utf-8"
